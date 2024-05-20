@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "dichotomous-image-segmentation"
+version = "0.1.0"
+description = ""
+authors = ["Dimitar Gueorguiev <dimitar_pg13@hotmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "2.2"
+pillow = "^10.3.0"
+numpy = "^1.26.4"
+pywavelets = "^1.6.0"
+pyyaml = "^6.0.1"
+scipy = "^1.13.0"
+scikit-image = "^0.23.2"
+matplotlib = "^3.9.0"
+networkx = "^3.3"
+ninja = "^1.11.1.1"
+olefile = "^0.47"
+pyopenssl = "^24.1.0"
+setuptools = "^69.5.1"
+packaging = "^24.0"
+jupyter = "^1.0.0"
+gdown = "^5.2.0"
+torchvision = "0.17.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
