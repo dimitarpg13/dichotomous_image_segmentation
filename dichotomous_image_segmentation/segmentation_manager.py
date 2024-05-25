@@ -30,11 +30,13 @@ from IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
 from huggingface_hub import hf_hub_download
 import shutil
 
-HUGGING_FACE_DIS_MODEL_REPO = "dimitarpg13/DIS"
+HUGGING_FACE_DIS_MODEL_REPO = 'dimitarpg13/DIS'
 
 DIS_PRETRAINED_MODEL_FILE_NAME = "isnet-general-use.pth"
 
 LOCAL_SAVED_MODELS_FOLDER = "./saved_models"
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class SegmentationManager:
