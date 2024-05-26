@@ -11,10 +11,11 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from data_loader_cache import get_im_gt_name_dict, create_dataloaders, GOSRandomHFlip, GOSResize, GOSRandomCrop, GOSNormalize #GOSDatasetCache,
-from basics import  f1_mae_torch #normPRED, GOSPRF1ScoresCache,f1score_torch,
-from models import *
+from basics import f1_mae_torch #normPRED, GOSPRF1ScoresCache,f1score_torch,
+from IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_datasets, hypar, train_dataloaders_val, train_datasets_val): #model_path, model_save_fre, max_ite=1000000):
 
@@ -35,8 +36,8 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
         torch.cuda.manual_seed(hypar["seed"])
 
     print("define gt encoder ...")
-    net = ISNetGTEncoder() #UNETGTENCODERCombine()
-    ## load the existing model gt encoder
+    net = ISNetGTEncoder() # UNETGTENCODERCombine()
+    # load the existing model gt encoder
     if(hypar["gt_encoder_model"]!=""):
         model_path = hypar["model_path"]+"/"+hypar["gt_encoder_model"]
         if torch.cuda.is_available():
@@ -45,7 +46,7 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
         else:
             net.load_state_dict(torch.load(model_path,map_location="cpu"))
         print("gt encoder restored from the saved weights ...")
-        return net ############
+        return net
 
     if torch.cuda.is_available():
         net.cuda()
@@ -62,10 +63,10 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
     if(not os.path.exists(model_path)):
         os.mkdir(model_path)
 
-    ite_num = hypar["start_ite"] # count the total iteration number
-    ite_num4val = 0 #
-    running_loss = 0.0 # count the toal loss
-    running_tar_loss = 0.0 # count the target output loss
+    ite_num = hypar["start_ite"]  # count the total iteration number
+    ite_num4val = 0
+    running_loss = 0.0  # count the toal loss
+    running_tar_loss = 0.0  # count the target output loss
     last_f1 = [0 for x in range(len(valid_dataloaders))]
 
     train_num = train_datasets[0].__len__()
@@ -76,7 +77,7 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
     gos_dataloader = train_dataloaders[0]
     epoch_num = hypar["max_epoch_num"]
     notgood_cnt = 0
-    for epoch in range(epoch_num): ## set the epoch num as 100000
+    for epoch in range(epoch_num):  # set the epoch num as 100000
 
         for i, data in enumerate(gos_dataloader):
 
@@ -91,7 +92,7 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
             # get the inputs
             labels = data['label']
 
-            if(hypar["model_digit"]=="full"):
+            if hypar["model_digit"] == "full":
                 labels = labels.type(torch.FloatTensor)
             else:
                 labels = labels.type(torch.HalfTensor)
@@ -140,7 +141,7 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
                     if(tmp_f1[fi]>last_f1[fi]):
                         tmp_out = 1
                 print("tmp_out:",tmp_out)
-                if(tmp_out):
+                if tmp_out:
                     notgood_cnt = 0
                     last_f1 = tmp_f1
                     tmp_f1_str = [str(round(f1x,4)) for f1x in tmp_f1]
@@ -162,16 +163,17 @@ def get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_d
                 running_tar_loss = 0.0
                 ite_num4val = 0
 
-                if(tmp_f1[0]>0.99):
+                if tmp_f1[0] > 0.99:
                     print("GT encoder is well-trained and obtained...")
                     return net
 
-                if(notgood_cnt >= hypar["early_stop"]):
+                if notgood_cnt >= hypar["early_stop"]:
                     print("No improvements in the last "+str(notgood_cnt)+" validation periods, so training stopped !")
                     exit()
 
     print("Training Reaches The Maximum Epoch Number")
     return net
+
 
 def valid_gt_encoder(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
     net.eval()
@@ -223,7 +225,7 @@ def valid_gt_encoder(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
             t_end = time.time()-t_start
             tmp_time.append(t_end)
 
-            # loss2_val, loss_val = muti_loss_fusion(ds_val, labels_val_v)
+            # loss2_val, loss_val = multi_loss_fusion(ds_val, labels_val_v)
             loss2_val, loss_val = net.compute_loss(ds_val, labels_val_v)
 
             # compute F measure
@@ -234,7 +236,7 @@ def valid_gt_encoder(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
 
                 pred_val = ds_val[0][t,:,:,:] # B x 1 x H x W
 
-                ## recover the prediction spatial size to the orignal image size
+                # recover the prediction spatial size to the orignal image size
                 pred_val = torch.squeeze(F.upsample(torch.unsqueeze(pred_val,0),(shapes_val[t][0],shapes_val[t][1]),mode='bilinear'))
 
                 ma = torch.max(pred_val)
@@ -260,8 +262,8 @@ def valid_gt_encoder(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
             torch.cuda.empty_cache()
 
             # if(loss_val.data[0]>1):
-            val_loss += loss_val.item()#data[0]
-            tar_loss += loss2_val.item()#data[0]
+            val_loss += loss_val.item() # data[0]
+            tar_loss += loss2_val.item() # data[0]
 
             print("[validating: %5d/%5d] val_ls:%f, tar_ls: %f, f1: %f, mae: %f, time: %f"% (i_val, val_num, val_loss / (i_val + 1), tar_loss / (i_val + 1), np.amax(F1[i_test,:]), MAE[i_test],t_end))
 
@@ -286,7 +288,7 @@ def train(net, optimizer, train_dataloaders, train_datasets, valid_dataloaders, 
     if hypar["interm_sup"]:
         print("Get the gt encoder ...")
         featurenet = get_gt_encoder(train_dataloaders, train_datasets, valid_dataloaders, valid_datasets, hypar,train_dataloaders_val, train_datasets_val)
-        ## freeze the weights of gt encoder
+        # freeze the weights of gt encoder
         for param in featurenet.parameters():
             param.requires_grad=False
 
@@ -297,12 +299,12 @@ def train(net, optimizer, train_dataloaders, train_datasets, valid_dataloaders, 
     batch_size_train = hypar["batch_size_train"]
     batch_size_valid = hypar["batch_size_valid"]
 
-    if(not os.path.exists(model_path)):
+    if not os.path.exists(model_path):
         os.mkdir(model_path)
 
     ite_num = hypar["start_ite"] # count the toal iteration number
     ite_num4val = 0 #
-    running_loss = 0.0 # count the toal loss
+    running_loss = 0.0 # count the total loss
     running_tar_loss = 0.0 # count the target output loss
     last_f1 = [0 for x in range(len(valid_dataloaders))]
 
@@ -314,11 +316,11 @@ def train(net, optimizer, train_dataloaders, train_datasets, valid_dataloaders, 
     gos_dataloader = train_dataloaders[0]
     epoch_num = hypar["max_epoch_num"]
     notgood_cnt = 0
-    for epoch in range(epoch_num): ## set the epoch num as 100000
+    for epoch in range(epoch_num): # set the epoch num as 100000
 
         for i, data in enumerate(gos_dataloader):
 
-            if(ite_num >= max_ite):
+            if ite_num >= max_ite:
                 print("Training Reached the Maximal Iteration Number ", max_ite)
                 exit()
 
@@ -329,7 +331,7 @@ def train(net, optimizer, train_dataloaders, train_datasets, valid_dataloaders, 
             # get the inputs
             inputs, labels = data['image'], data['label']
 
-            if(hypar["model_digit"]=="full"):
+            if hypar["model_digit"] == "full":
                 inputs = inputs.type(torch.FloatTensor)
                 labels = labels.type(torch.FloatTensor)
             else:
@@ -408,11 +410,12 @@ def train(net, optimizer, train_dataloaders, train_datasets, valid_dataloaders, 
                 running_tar_loss = 0.0
                 ite_num4val = 0
 
-                if(notgood_cnt >= hypar["early_stop"]):
+                if notgood_cnt >= hypar["early_stop"]:
                     print("No improvements in the last "+str(notgood_cnt)+" validation periods, so training stopped !")
                     exit()
 
     print("Training Reaches The Maximum Epoch Number")
+
 
 def valid(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
     net.eval()
@@ -445,7 +448,7 @@ def valid(net, valid_dataloaders, valid_datasets, hypar, epoch=0):
             val_cnt = val_cnt + 1.0
             imidx_val, inputs_val, labels_val, shapes_val = data_val['imidx'], data_val['image'], data_val['label'], data_val['shape']
 
-            if(hypar["model_digit"]=="full"):
+            if hypar["model_digit"] == "full":
                 inputs_val = inputs_val.type(torch.FloatTensor)
                 labels_val = labels_val.type(torch.FloatTensor)
             else:
@@ -523,15 +526,15 @@ def main(train_datasets,
          valid_datasets,
          hypar): # model: "train", "test"
 
-    ### --- Step 1: Build datasets and dataloaders ---
+    # --- Step 1: Build datasets and dataloaders ---
     dataloaders_train = []
     dataloaders_valid = []
 
-    if(hypar["mode"]=="train"):
+    if hypar["mode"]=="train":
         print("--- create training dataloader ---")
-        ## collect training dataset
+        # collect training dataset
         train_nm_im_gt_list = get_im_gt_name_dict(train_datasets, flag="train")
-        ## build dataloader for training datasets
+        # build dataloader for training datasets
         train_dataloaders, train_datasets = create_dataloaders(train_nm_im_gt_list,
                                                              cache_size = hypar["cache_size"],
                                                              cache_boost = hypar["cache_boost_train"],
@@ -554,9 +557,9 @@ def main(train_datasets,
         print(len(train_dataloaders), " train dataloaders created")
 
     print("--- create valid dataloader ---")
-    ## build dataloader for validation or testing
+    # build dataloader for validation or testing
     valid_nm_im_gt_list = get_im_gt_name_dict(valid_datasets, flag="valid")
-    ## build dataloader for training datasets
+    # build dataloader for training datasets
     valid_dataloaders, valid_datasets = create_dataloaders(valid_nm_im_gt_list,
                                                           cache_size = hypar["cache_size"],
                                                           cache_boost = hypar["cache_boost_valid"],
@@ -569,12 +572,12 @@ def main(train_datasets,
     print(len(valid_dataloaders), " valid dataloaders created")
     # print(valid_datasets[0]["data_name"])
 
-    ### --- Step 2: Build Model and Optimizer ---
+    # --- Step 2: Build Model and Optimizer ---
     print("--- build model ---")
-    net = hypar["model"]#GOSNETINC(3,1)
+    net = hypar["model"]  # GOSNETINC(3,1)
 
     # convert to half precision
-    if(hypar["model_digit"]=="half"):
+    if hypar["model_digit"] == "half":
         net.half()
         for layer in net.modules():
           if isinstance(layer, nn.BatchNorm2d):
@@ -583,7 +586,7 @@ def main(train_datasets,
     if torch.cuda.is_available():
         net.cuda()
 
-    if(hypar["restore_model"]!=""):
+    if hypar["restore_model"] != "":
         print("restore model from:")
         print(hypar["model_path"]+"/"+hypar["restore_model"])
         if torch.cuda.is_available():
@@ -594,8 +597,8 @@ def main(train_datasets,
     print("--- define optimizer ---")
     optimizer = optim.Adam(net.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
 
-    ### --- Step 3: Train or Valid Model ---
-    if(hypar["mode"]=="train"):
+    # --- Step 3: Train or Valid Model ---
+    if hypar["mode"] == "train":
         train(net,
               optimizer,
               train_dataloaders,
@@ -613,10 +616,9 @@ def main(train_datasets,
 
 if __name__ == "__main__":
 
-    ### --------------- STEP 1: Configuring the Train, Valid and Test datasets ---------------
-    ## configure the train, valid and inference datasets
+    # --------------- STEP 1: Configuring the Train, Valid and Test datasets ---------------
+    # configure the train, valid and inference datasets
     train_datasets, valid_datasets = [], []
-    dataset_1, dataset_1 = {}, {}
 
     dataset_tr = {"name": "DIS5K-TR",
                  "im_dir": "../DIS5K/DIS-TR/im",
@@ -688,8 +690,8 @@ if __name__ == "__main__":
         hypar["restore_model"] = "" ## name of the segmentation model weights .pth for resume training process from last stop or for the inferencing
         hypar["start_ite"] = 0 ## start iteration for the training, can be changed to match the restored training process
         hypar["gt_encoder_model"] = ""
-    else: ## configure the segmentation output path and the to-be-used model weights path
-        hypar["valid_out_dir"] = "../your-results/"##"../DIS5K-Results-test" ## output inferenced segmentation maps into this fold
+    else: # configure the segmentation output path and the to-be-used model weights path
+        hypar["valid_out_dir"] = "../your-results/" #"../DIS5K-Results-test" ## output inferenced segmentation maps into this fold
         hypar["model_path"] = "../saved_models/IS_Net" ## load trained weights from this path
         hypar["restore_model"] = "isnet.pth"##"isnet.pth" ## name of the to-be-loaded weights
 
@@ -715,7 +717,7 @@ if __name__ == "__main__":
 
     ## --- 2.5. define model  ---
     print("building model...")
-    hypar["model"] = ISNetDIS() #U2NETFASTFEATURESUP()
+    hypar["model"] = ISNetDIS() # U2NETFASTFEATURESUP()
     hypar["early_stop"] = 20 ## stop the training when no improvement in the past 20 validation periods, smaller numbers can be used here e.g., 5 or 10.
     hypar["model_save_fre"] = 2000 ## valid and save model weights every 2000 iterations
 
