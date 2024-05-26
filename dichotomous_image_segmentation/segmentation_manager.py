@@ -45,9 +45,21 @@ def maybe_download_pretrained_model():
     """
     if not os.path.exists(LOCAL_SAVED_MODELS_FOLDER):
         os.mkdir(LOCAL_SAVED_MODELS_FOLDER)
-
         local_temp_file = hf_hub_download(repo_id=HUGGING_FACE_DIS_MODEL_REPO, filename=DIS_PRETRAINED_MODEL_FILE_NAME)
         shutil.copy(local_temp_file, LOCAL_SAVED_MODELS_FOLDER)
+
+
+class GOSNormalize(object):
+    """
+    Normalize the Image using torch.transforms
+    """
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self,image):
+        image = normalize(image,self.mean,self.std)
+        return image
 
 
 class SegmentationManager:
