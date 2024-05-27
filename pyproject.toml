@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Dimitar Gueorguiev <dimitar_pg13@hotmail.com>"]
 readme = "README.md"
-packages = [{include = "dichtomous_image_segmentation"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
