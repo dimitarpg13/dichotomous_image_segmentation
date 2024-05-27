@@ -112,7 +112,7 @@ class SegmentationManager:
 
         inputs_val_v = Variable(inputs_val, requires_grad=False).to(self.device)  # wrap inputs in Variable
 
-        ds_val = net(inputs_val_v)[0]  # list of 6 results
+        ds_val = self.net(inputs_val_v)[0]  # list of 6 results
 
         pred_val = ds_val[0][0, :, :,
                    :]  # B x 1 x H x W    # we want the first one which is the most accurate prediction
@@ -125,6 +125,7 @@ class SegmentationManager:
         mi = torch.min(pred_val)
         pred_val = (pred_val - mi) / (ma - mi)  # max = 1
 
-        if device == 'cuda': torch.cuda.empty_cache()
+        if DEVICE == 'cuda':
+            torch.cuda.empty_cache()
         return (pred_val.detach().cpu().numpy() * 255).astype(np.uint8)  # it is the mask we need
 
