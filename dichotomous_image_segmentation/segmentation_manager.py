@@ -82,6 +82,19 @@ def build_model(hypar, device):
     return net
 
 
+def get_center_of_mass(mask):
+    x_coord = 0.0
+    y_coord = 0.0
+    tot_mass = 0.0
+    for col_idx, col in enumerate(mask):
+        for row_idx, pixel in enumerate(col):
+            x_coord += row_idx * pixel
+            y_coord += col_idx * pixel
+            tot_mass += pixel
+
+    return tuple([round(x_coord / tot_mass), round(y_coord / tot_mass)])
+
+
 class SegmentationManager:
     def __init__(self, device):
         self.device = device
@@ -99,9 +112,12 @@ class SegmentationManager:
 
         self.net = build_model(self.hypar, self.device)
 
-    def predict(self, inputs_val, shapes_val):
+    def predict_mask_from_tensor(self, inputs_val, shapes_val):
         """
         Given an Image, predict the mask
+        :inputs_val: Image
+        :shapes_val: image size
+        :return: mask
         """
         self.net.eval()
 
@@ -129,3 +145,16 @@ class SegmentationManager:
             torch.cuda.empty_cache()
         return (pred_val.detach().cpu().numpy() * 255).astype(np.uint8)  # it is the mask we need
 
+    def predict_from_file(self, image_path, image_name, image_extension):
+        """
+        :param image_path: str
+        :param image_name: str
+        :param image_extension: str ('JPEG' or 'PNG')
+        """
+        image_name = "smiling-man"
+        full_image_path = image_path + image_name + "." + image_extension
+
+        image_tensor, orig_size = load_image(full_image_path, self.hypar)
+        mask = self.predict_mask_from_tensor(image_tensor, orig_size)
+
+        return mask, get_center_of_mass(mask)
