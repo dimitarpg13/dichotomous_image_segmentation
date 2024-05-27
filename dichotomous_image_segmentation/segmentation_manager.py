@@ -80,6 +80,11 @@ def build_model(hypar, device):
 
 
 def get_center_of_mass(mask):
+    """
+    Computes the center of mass of a mask
+    :param mask:
+    :return: tuple with x and y coordinates of the center of mass of the mask
+    """
     x_coord = 0.0
     y_coord = 0.0
     tot_mass = 0.0
