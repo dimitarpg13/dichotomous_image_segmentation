@@ -153,7 +153,6 @@ class SegmentationManager:
         :param image_name: str
         :param image_extension: str ('JPEG' or 'PNG')
         """
-        image_name = "smiling-man"
         full_image_path = image_path + image_name + "." + image_extension
 
         image_tensor, orig_size = load_image(full_image_path, self.hypar)
