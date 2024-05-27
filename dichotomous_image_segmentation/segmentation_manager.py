@@ -1,14 +1,11 @@
 import numpy as np
-from PIL import Image
 import torch
 from torch.autograd import Variable
 from torchvision import transforms
 import torch.nn.functional as F
-import gdown
 import os
 
 import requests
-import matplotlib.pyplot as plt
 from io import BytesIO
 
 from IS_Net.data_loader_cache import normalize, im_reader, im_preprocess
@@ -130,10 +127,10 @@ class SegmentationManager:
 
         ds_val = self.net(inputs_val_v)[0]  # list of 6 results
 
-        pred_val = ds_val[0][0, :, :,
-                   :]  # B x 1 x H x W    # we want the first one which is the most accurate prediction
+        # we want the first one which is the most accurate prediction
+        pred_val = ds_val[0][0, :, :, :]  # B x 1 x H x W
 
-        # recover the prediction spatial size to the orignal image size
+        # recover the prediction spatial size to the original image size
         pred_val = torch.squeeze(
             F.upsample(torch.unsqueeze(pred_val, 0), (shapes_val[0][0], shapes_val[0][1]), mode='bilinear'))
 
@@ -157,4 +154,4 @@ class SegmentationManager:
         image_tensor, orig_size = load_image(full_image_path, self.hypar)
         mask = self.predict_mask_from_tensor(image_tensor, orig_size)
 
-        return mask, get_center_of_mass(mask)
+        return mask
