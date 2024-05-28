@@ -101,6 +101,8 @@ class SegmentationManager:
     def __init__(self, device):
         self.device = device
 
+        maybe_download_pretrained_model()
+
         # parameters for inference
         self.hypar = {"model_path": LOCAL_SAVED_MODELS_FOLDER,
                       "restore_model": DIS_PRETRAINED_MODEL_FILE_NAME,
