@@ -8,8 +8,8 @@ import os
 import requests
 from io import BytesIO
 
-from IS_Net.data_loader_cache import normalize, im_reader, im_preprocess
-from IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
+from dichotomous_image_segmentation.IS_Net.data_loader_cache import normalize, im_reader, im_preprocess
+from dichotomous_image_segmentation.IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
 
 from huggingface_hub import hf_hub_download
 import shutil

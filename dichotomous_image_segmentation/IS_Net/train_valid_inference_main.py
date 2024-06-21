@@ -10,9 +10,9 @@ from torch.autograd import Variable
 import torch.optim as optim
 import torch.nn.functional as F
 
-from data_loader_cache import get_im_gt_name_dict, create_dataloaders, GOSRandomHFlip, GOSResize, GOSRandomCrop, GOSNormalize #GOSDatasetCache,
-from basics import f1_mae_torch #normPRED, GOSPRF1ScoresCache,f1score_torch,
-from IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
+from dichotomous_image_segmentation.IS_Net.data_loader_cache import get_im_gt_name_dict, create_dataloaders, GOSRandomHFlip, GOSResize, GOSRandomCrop, GOSNormalize #GOSDatasetCache,
+from dichotomous_image_segmentation.IS_Net.basics import f1_mae_torch #normPRED, GOSPRF1ScoresCache,f1score_torch,
+from dichotomous_image_segmentation.IS_Net.models.isnet import ISNetGTEncoder, ISNetDIS
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
