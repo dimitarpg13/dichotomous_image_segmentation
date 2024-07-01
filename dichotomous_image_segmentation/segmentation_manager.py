@@ -84,17 +84,14 @@ def get_center_of_mass(mask):
     Computes the center of mass of a mask
     :param mask:
     :return: tuple with x and y coordinates of the center of mass of the mask
-    """
-    x_coord = 0.0
-    y_coord = 0.0
-    tot_mass = 0.0
-    for col_idx, col in enumerate(mask):
-        for row_idx, pixel in enumerate(col):
-            x_coord += row_idx * pixel
-            y_coord += col_idx * pixel
-            tot_mass += pixel
 
-    return tuple([round(x_coord / tot_mass), round(y_coord / tot_mass)])
+    Note: the mask is an 2D array of pixels and it comes with swapped horizontal and vertical axes.
+     Therefore, the center of mass coordinates swapped as well.
+    """
+    rows = mask.shape[0]
+    cols = mask.shape[1]
+    center_of_mass = (mask * np.mgrid[0:rows, 0:cols]).sum(1).sum(1) / mask.sum()
+    return tuple([round(center_of_mass[1]), round(center_of_mass[0])])
 
 
 class SegmentationManager:
