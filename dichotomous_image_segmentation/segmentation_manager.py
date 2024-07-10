@@ -59,6 +59,11 @@ def load_image(im_path, hypar):
     shape = torch.from_numpy(np.array(im_shp))
     return transform(im).unsqueeze(0), shape.unsqueeze(0)  # make a batch of image, shape
 
+def load_image_from_ndarray(im, hypar):
+    im_prep, im_shp = im_preprocess(im, hypar["cache_size"])
+    im_scaled = torch.divide(im_prep, 255.0)
+    shape = torch.from_numpy(np.array(im_shp))
+    return transform(im_scaled).unsqueeze(0), shape.unsqueeze(0)
 
 def build_model(hypar, device):
     net = hypar["model"]  # GOSNETINC(3,1)
@@ -84,14 +89,17 @@ def get_center_of_mass(mask):
     Computes the center of mass of a mask
     :param mask:
     :return: tuple with x and y coordinates of the center of mass of the mask
-
-    Note: the mask is an 2D array of pixels and it comes with swapped horizontal and vertical axes.
-     Therefore, the center of mass coordinates swapped as well.
     """
-    rows = mask.shape[0]
-    cols = mask.shape[1]
-    center_of_mass = (mask * np.mgrid[0:rows, 0:cols]).sum(1).sum(1) / mask.sum()
-    return tuple([round(center_of_mass[1]), round(center_of_mass[0])])
+    x_coord = 0.0
+    y_coord = 0.0
+    tot_mass = 0.0
+    for col_idx, col in enumerate(mask):
+        for row_idx, pixel in enumerate(col):
+            x_coord += row_idx * pixel
+            y_coord += col_idx * pixel
+            tot_mass += pixel
+
+    return tuple([round(x_coord / tot_mass), round(y_coord / tot_mass)])
 
 
 class SegmentationManager:
@@ -118,7 +126,7 @@ class SegmentationManager:
         Given an Image, predict the mask
         :inputs_val: Image
         :shapes_val: image size
-        :return: mask
+        :return: segmentation mask as ndarray
         """
         self.net.eval()
 
@@ -151,10 +159,21 @@ class SegmentationManager:
         :param image_path: str
         :param image_name: str
         :param image_extension: str ('JPEG' or 'PNG')
+        :return segmentation mask as ndarray
         """
         full_image_path = image_path + image_name + "." + image_extension
 
         image_tensor, orig_size = load_image(full_image_path, self.hypar)
+        mask = self.predict_mask_from_tensor(image_tensor, orig_size)
+
+        return mask
+
+    def predict_from_ndarray(self, image: np.ndarray):
+        """
+        :param image: ndarray
+        :return segmentation_mask as ndarray
+        """
+        image_tensor, orig_size = load_image_from_ndarray(image, self.hypar)
         mask = self.predict_mask_from_tensor(image_tensor, orig_size)
 
         return mask
